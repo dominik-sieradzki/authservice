@@ -7,7 +7,9 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec;
 
+import java.nio.charset.Charset;
 import java.util.List;
+import java.util.Random;
 
 import javax.validation.Valid;
 
@@ -72,7 +74,15 @@ public class AuthRequestController {
 	@ResponseStatus(value=HttpStatus.OK, reason = "OK")
 	void ok(AuthRequest o) {
 		MultiValueMap<String, String> bodyValues = new LinkedMultiValueMap<>();
-		bodyValues.add(null, null);//TODO: forumlate response makeup
+		if(o.getResponse_type() != "id_token") {
+			bodyValues.add("access_token", generateToken(20));
+			bodyValues.add("token_type", "Bearer");	
+		}
+		
+		bodyValues.add("id_token", o.getClient_id());
+		bodyValues.add("state", o.getState());
+		bodyValues.add("expires_in", "600");//10 minutes
+		
 		String response = webClient.post()
 		        .uri(o.getRedirect_uri())
 		        .accept(MediaType.APPLICATION_JSON)
@@ -80,6 +90,13 @@ public class AuthRequestController {
 		        .retrieve()
 		        .bodyToMono(String.class).log()
 				.block();
+	}
+	
+	public String generateToken(int length) {
+		byte[] array = new byte[length]; // length is bounded by 7
+	    new Random().nextBytes(array);
+	    String generatedString = new String(array, Charset.forName("UTF-8"));
+	    return generatedString;
 	}
 
 }
